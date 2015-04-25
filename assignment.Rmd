@@ -1,0 +1,332 @@
+---
+title: "Practical Machine Learning Course Project"
+author: "Edward Kuns"
+date: "Sunday, April 26, 2015"
+output:
+  html_document:
+    fig_caption: yes
+---
+
+<!--
+  There appears to be a bug in knitr that if we include multiple blocks of
+  code in a single chunk, the variables from the blocks are not preserved and
+  are not available outside that chunk.  Thus, we have a bunch of different
+  chunks below, one block of code included per chunk.
+  -->
+```{r LoadCodeAndLibraries, echo=FALSE, eval=TRUE, message=F, warning=F}
+library(knitr)
+library(ggplot2)
+library(caret)
+library(randomForest)
+read_chunk('assignment.R')
+<<LoadingLibraries>>
+```
+
+```{r LoadSplitData, echo=FALSE, eval=TRUE, cache=TRUE}
+<<LoadSplitData>>
+```
+```{r Parameters, echo=FALSE, eval=TRUE, cache=TRUE}
+<<Parameters>>
+```
+
+<!--
+  First we run all of the fitting code to generate our models and all
+  of the statistics we want to keep and report on.
+  -->
+
+<!-- Start the cluster (for parallel processing) -->
+```{r StartClustering, echo=FALSE, eval=TRUE, message=F, warning=F}
+<<StartClustering>>
+```
+
+```{r ModelOne, echo=FALSE, eval=TRUE, cache=TRUE, message=F, warning=F}
+<<ModelOne>>
+```
+```{r ModelTwo, echo=FALSE, eval=TRUE, cache=TRUE, message=F, warning=F}
+<<ModelTwo>>
+```
+```{r ModelThree, echo=FALSE, eval=TRUE, cache=TRUE, message=F, warning=F}
+<<ModelThree>>
+```
+```{r ModelFour, echo=FALSE, eval=TRUE, cache=TRUE, message=F, warning=F}
+<<ModelFour>>
+```
+```{r ModelFive, echo=FALSE, eval=TRUE, cache=TRUE, message=F, warning=F}
+<<ModelFive>>
+```
+```{r ModelSix, echo=FALSE, eval=TRUE, cache=TRUE, message=F, warning=F}
+<<ModelSix>>
+```
+
+<!-- Shut down the cluster -->
+```{r StopClustering, echo=FALSE, eval=TRUE, message=F, warning=F}
+<<StopClustering>>
+```
+
+```{r PostRunCalculations, echo=FALSE, eval=TRUE}
+<<PostRunCalculations>>
+```
+
+# Abstract
+
+In this exercise, I will run various machine learning algorithms on a data sample
+collected while study participants were weight lifting.  The goal is to accurately
+predict the specific activity being done based on measurements made during the
+activity.  This is a classification machine learning problem.
+
+# Data Set Description
+
+The data set is from:
+
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; and Fuks, H. Qualitative Activity 
+Recognition of Weight Lifting Exercises, Proceedings of 4th International Conference
+with SIGCHI (Augmented Human '13).  Stuttgart, German, ACM SGICHI, 2013
+
+In the experiment, the participants were asked to do ten repetitions of bicep
+curls in one of five different ways, correct and four different incorrect
+ways:
+
+* A - With proper form, exactly according to the specifications
+* B - Throwing elbows to the front
+* C - Lifting the dumbbell only half way
+* D - Lowering the dumbbell only half way
+* E - Throwing hips to the front
+
+The participants did the bicep curls with four instruments attached.  Each instrument
+is "9 degrees of freedom Razor inertial measurement unit (IMU)" providing 
+three-axis accelerameter, gyroscope, and magnetometer data at a rate of 45 Hz.
+The four IMUs were mounted on the user's glove, arm band, lumbar belt, and on the
+dumbbell.
+
+After the data was acquired from the participants doing the exercises, a fair
+amount of post-processing was done on the data.  I won't describe the
+post-processing because all of the features that were created and added by that
+post-processing were discarded for my machine learning algoritms.  Those
+additional features were inappropriate for the kinds of machine learning
+algorithms I was using, because I was not treating the data as a time series.
+In fact, it turns out that one does not need to treat this data as a time
+series to accurately predict which form of bicep curls was being done.
+
+# Data Selection
+
+I decided to try a variety of different models to see how they perform.  After
+some exploratory analysis, I realized that the post-processing columns mostly
+contain `NA` values, or the literal value "`#DIV/0!`".  Both were treated as
+NA when importing the data.  Because the post-processing columns are over 95%
+NA values due to treating the originally measured data as a time series, these
+columns are not useful for feeding into a machine learning algorithm.  If I
+were processing this data as a time series, I would make a different choice.
+
+To avoid the possibility of overtraining/mistraining, I discarded the timestamp
+and window columns from the data.  These columns correlate with the outcome
+variable, but won't be useful for prediction when using data collected at
+another time.  The user name also shouldn't have anything to do with predicting
+which version of the bicep curls was being done.  Thus, in the end, I only
+included the 52 original data measurements for my machine learning sample.
+The 52 features are broken down into four sets of 13 features, where the four
+sets are belt (lumbar belt), arm (arm band), dumbbell, and forearm (glove).
+The 13 features for each are:
+
+* 3d gyroscope:  roll, pitch, yaw, plus gyros\_belt\_x, gyros\_belt\_y, gyros\_belt\_z
+* 3d accelerameter:  accel\_belt\_x, accel\_belt\_y,  accel\_belt\_z, and total\_accel\_belt
+* 3d magnetometer:  magnet\_belt\_x,  magnet\_belt\_y, magnet\_belt\_z
+
+The data set used as input to the training models includes these 52 features plus
+the `classe` feature that is the method in which the exercise was done, a letter
+A - F.
+
+# Model Selection
+
+I selected six different models to try on this data set.  I selected random
+forest because the lectures mentioned this as a good model to use for
+classification problems.  The remaining models were selected as models that
+happened to be supported by the caret package, and which were not simply
+variants on a theme.  I wanted to try a variety of models.  The only requirement
+was that the model be suitable for classification problems.  The models
+selected are:
+
+* Random Forest
+* K Nearest Neighbor
+* Classification and Regression Trees (CART)
+* Stochastic Gradient Boosting
+* Support Vector Machines w/ Linear Kernel
+* Linear Discriminant Analysis
+
+For all models, the data was partitioned into a training data set (60% of the
+original data) and a test data set (40% of the original data).  The intent is
+that the out-of-sample error rate can be measured on the test data set.
+
+There is an additional sample of 20 events.  This sample is not used for this
+part of the analysis.  However, the best fit produced in this analysis is used
+to predict the method of bicep curl performed for each of those events and
+those predictions were separately submitted for grading.
+
+## Random Forest Fit Tuning
+
+With random forests, Caret, by default, fits 500 trees with three different
+values of the tuning parameter mtry.  In order to decrease the running time
+of the machine learning algorithm, I decided to investigate whether this was
+necessary.  First, I ran the normal random forest algorithm, not via the caret
+package, with 100 trees:
+
+```{r ShowExploratory, echo=TRUE, eval=FALSE}
+<<Exploratory>>
+```
+
+```{r ExploratoryRFPlot, eval=TRUE, echo=TRUE, fig.height=4, fig.width=8, fig.cap="**Figure 1**: Choosing a value for the number of trees.  Notice that the error rapidly decreases, reaching its approximate minimal value between around 20-40."}
+<<ExploratoryRFPlot>>
+```
+
+Given the increase in computing time as the number of trees is increased, and
+contrasting this with the minimal gain in accuracy above about 40, for the final
+random forest fit, I set the number of trees to be 40.
+
+Exploratory analysis also showed that it was reasonable and safe to set the mtry
+parameter to half the number of features, that doing so did not decrease the
+quality of the fit.  Since caret, by default, will try three different values
+of mtry, setting an explicit value sped the fit up by a factor of three.
+
+Finally, prox=TRUE (e.g., `proximity=TRUE`) was passed to the random forest
+algorithm so that it would keep additional data during its processing.
+
+## K Nearest Neighbor Tuning
+
+For the K Nearest Neighbor model, the tune length was increased from the default
+of 3 up to 20.  This allowed this model to explore a larger set of values of
+the parameters it was fitting.
+
+## Stochastic Gradient Boosting Tuning
+
+Verbose was set to false for Stochastic Gradient Boosting to quiet the flood
+of diagnostic output that would otherwise be seen.
+
+## Cross-validation
+
+The fits for all models use 5 rounds of repeated cross validation.
+
+## Tuning summary
+
+Other than the parameters and tuning described here, all other fit parameters
+were left at their default values.  Thus, most fit parameters were left at their
+defaults, trusting the library authors to choose reasonable defaults.
+
+# Results
+
+After each fit was trained, the confusion matrix was generated using that fit
+on the training sample (to look at in-sample accuracy) and on the test sample
+(to look at the out-of-sample accuracy).  Additionally, since cross validation
+was used on all models, the accuracy as measured by cross validation is
+available to compare to the value measured on the test sample.
+
+The "accuracy" measurement simply means the percentage of correct predictions --
+true positives and true negatives.  The error rate is simply 1 - accuracy (or
+100% - accuracy as a percentage).
+
+The accuracy of the six models varies widely, from almost 50% accuracy to over
+99% accuracy.  (By "accuracy" I mean the measured accuracy 
+
+Classification and regression trees performed by far the worst, but several
+models were so-so at best.  Only two of the models performed better than 95%
+accuracy:  random forest and stochastic gradient boosting.  The random forest
+model was the clear winner, with better than 99% accuracy.  In fact, the
+random forest model achieved a 100% accuracy on the training sample.  This
+suggests the possibility of overfitting, but the model was also higly accurate
+on the test sample.  Therefore, I am not worried about overfitting in this case.
+
+Notice, as expected, that in almost all cases, the in-sample error rate is
+lower than the out-of-sample error rate.  The only model for which that is not
+true is CART, which was about 50% accurate.  This is still better than random
+guessing, which would only be expected to be about 20% accurate given that
+there are five possible choices.
+
+The running time in seconds for each model fit is also shown.  The fastest
+model was about 35 times faster than the slowest!  Interestingly, the fastest
+models to train were also the least accurate, as a group.
+
+|                    Model    | Accuracy (%) | Out of Sample Error (%) | In Sample Error (%) | Running Time (sec) |
+| ---------------------------------------: | :-----------: | :-----------: | --------------: | ------------: |
+|               Random Forest              | `r model1Acc` | `r model1Err` | `r model1ISErr` | `r model1Time[3]` |
+|            K Nearest Neighbor            | `r model2Acc` | `r model2Err` | `r model2ISErr` | `r model2Time[3]` |
+| Classification and Regression Trees      | `r model3Acc` | `r model3Err` | `r model3ISErr` | `r model3Time[3]` |
+|       Stochastic Gradient Boosting       | `r model4Acc` | `r model4Err` | `r model4ISErr` | `r model4Time[3]` |
+| Support Vector Machines w/ Linear Kernel | `r model5Acc` | `r model5Err` | `r model5ISErr` | `r model5Time[3]` |
+|      Linear Discriminant Analysis        | `r model6Acc` | `r model6Err` | `r model6ISErr` | `r model6Time[3]` |
+
+**Figure 2**. Comparing model Accuracy, in and out of sample error rate, and running time.  The accuracy and out-of-sample error are measured on the test sample.  The in-sample error, of course, is measured on the training sample.
+
+Since the random forest was the most accurate fit, it's interesting to see which
+features ended up being the most significant.
+
+```{r VariableImportance, eval=TRUE, echo=TRUE, fig.height=7, fig.width=8, fig.cap="**Figure 3**: Variable Importance of the features for the random forest model.  The gyro features are mostly at the bottom of the plot.  On the other hand, roll, pitch, and yaw for the belt were three of the top four features."}
+<<VariableImportance>>
+```
+
+Finally, since caret automatically does cross validation (unless you specifically
+disable it), it is interesting to compare the cross validation that is done 
+during the fitting process (and thus within the training sample) with the error
+measured on the test sample.  
+
+It turns out that the cross validated measurement of the out-of-sample error 
+matches the actual measured out-of-sample error very nicely, for all models.
+
+
+|                  Model           | Out of Sample Error (%) | CV Estimate of OOS Error (%) | Abs(Difference) |
+| -----------------------------------------: | :-----------: | :--------------: | :-------------: |
+|               Random Forest                | `r model1Err` | `r model1EstErr` | `r model1cvErr` |
+|            K Nearest Neighbor              | `r model2Err` | `r model2EstErr` | `r model2cvErr` |
+| Classification and Regression Trees        | `r model3Err` | `r model3EstErr` | `r model3cvErr` |
+|       Stochastic Gradient Boosting         | `r model4Err` | `r model4EstErr` | `r model4cvErr` |
+| Support Vector Machines with Linear Kernel | `r model5Err` | `r model5EstErr` | `r model5cvErr` |
+|      Linear Discriminant Analysis          | `r model6Err` | `r model6EstErr` | `r model6cvErr` |
+
+**Figure 4**. Comparing cross validation to validation by the test sample.  Here, I compare the error rates, which is simply 100% - the accuracy (as a percentage).  The chart lists the absolutely value of the difference only because for the purpose of this comparison it doesn't matter which one is larger than the other.
+
+In all cases, the cross validation measurement of the out-of-sample error rate
+was within 1% of the out-of-sample error rate as measured in the test sample.
+
+# Conclusion
+
+Using a random forest model, it is possible to get an excellent fit, meaning it
+is possible to accurately predict the exercise method using just the 52 features
+measured from the sensors or trivially computed from the sensor measurements.
+It is not necessary to treat the data as a time series to make accurate 
+predictions.  With this specific data (bicep curls with this set of sensors),
+the random forest model is the best of the six different models that were tried,
+achieving greater than 99% accuracy.
+
+The accuracy and out-of-sample error rate were measured on a test sample, although
+this measurement agreed well with the cross-validated measurement made by caret.
+Thus, the random forest model out-of-sample error rate is expected to be less
+than 1%, as it was measured to be less than 1% on the test data sample.
+
+Note that the random forest model tuned in this analysis was used to predict the
+20 samples provided for the "Course Project: Submission" portion, and all 20
+were correctly predicted.
+
+# Appendix:  Code for the Analysis
+
+All of the code used for the fitting is shown below.
+
+```{r ShowCode, echo=TRUE, eval=FALSE}
+<<LoadingLibraries>>
+
+<<LoadSplitData>>
+
+<<Parameters>>
+
+<<StartClustering>>
+
+<<ModelOne>>
+
+<<ModelTwo>>
+
+<<ModelThree>>
+
+<<ModelFour>>
+
+<<ModelFive>>
+
+<<ModelSix>>
+
+<<StopClustering>>
+```
