@@ -1,4 +1,5 @@
-# Assumes that the fit modFitRF exists...
+# Assumes that the fit bestModel exists...
+# Choose the best model and assign it to bestModel before sourcing this script.
 
 pml_write_files = function(x) {
   n = length(x)
@@ -14,5 +15,5 @@ if (!file.exists("submission")) {
 }
 
 submission <- read.csv(testingFile, na.strings=c("NA", "#DIV/0!"))
-answers <- predict(modFitRF, submission, type="response")
+answers <- predict(bestModel, submission, type="response")
 pml_write_files(answers)
