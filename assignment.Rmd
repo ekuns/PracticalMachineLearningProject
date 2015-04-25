@@ -69,10 +69,11 @@ read_chunk('assignment.R')
 
 ## Abstract
 
-In this exercise, I will run various machine learning algorithms on a data sample
-collected while study participants were performing bicep curls.  The goal is to accurately
-predict the specific activity being done based on measurements made during the
-activity.  This is a classification machine learning problem.
+In this exercise, I ran various machine learning algorithms on a data measuring
+study participants performing bicep curls.  The goal is to accurately predict
+the specific activity being done.  This is a classification machine learning
+problem.  With a random forest model, I was able to achieve better than 99%
+accuracy.
 
 ## Data Set Description
 
@@ -93,49 +94,46 @@ Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. ,
 pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9.
 DOI: 10.1007/978-3-642-34459-6_6. 
 
-In the experiment, the participants were asked to do ten repetitions of bicep
-curls in one of five different ways, correct and four different incorrect
-ways:
+In the experiment, the participants were asked to do ten bicep curls repetitions
+in one of five different ways:
 
-* A - With proper form, exactly according to the specifications
+* A - With proper form
 * B - Throwing elbows to the front
 * C - Lifting the dumbbell only half way
 * D - Lowering the dumbbell only half way
 * E - Throwing hips to the front
 
 The participants did the bicep curls with four instruments attached.  Each instrument
-is "9 degrees of freedom Razor inertial measurement unit (IMU)" providing 
+is a "9 degrees of freedom Razor inertial measurement unit (IMU)" providing 
 three-axis accelerameter, gyroscope, and magnetometer data at a rate of 45 Hz.
 The four IMUs were mounted on the user's glove, arm band, lumbar belt, and on the
 dumbbell.
 
-After the data was acquired from the participants doing the exercises, a fair
-amount of post-processing was done on the data.  I won't describe the
-post-processing because all of the features that were created and added by that
-post-processing were discarded for my machine learning algoritms.  Those
-additional features were inappropriate for the kinds of machine learning
-algorithms I was using, because I was not treating the data as a time series.
-In fact, it turns out that one does not need to treat this data as a time
-series to accurately predict which form of bicep curls was being done.
+After the data was acquired from the participants doing the exercises, the
+original authors did a fair amount of post-processing was done on the data.  I
+don't describe the post-processing because I discarded all of the features it
+created.  Those additional features were inappropriate for the kinds of machine
+learning algorithms I was using because I was not treating the data as a time
+series.  In fact, you don't need to treat this data as a time series to
+accurately predict which form of bicep curls is being done.
 
 ## Data Selection
 
 I decided to try a variety of different models to see how they perform.  After
 some exploratory analysis, I realized that the post-processing columns mostly
-contain `NA` values, or the literal value "`#DIV/0!`".  Both were treated as
-NA when importing the data.  Because the post-processing columns are over 95%
-NA values due to treating the originally measured data as a time series, these
-columns are not useful for feeding into a machine learning algorithm.  If I
-were processing this data as a time series, I would make a different choice.
+contain `NA` values, or the literal value "`#DIV/0!`".  Both values were treated
+as NA when importing the data.  These columns contain over 95% NA values and are
+not useful if you don't treat the data as a time series.
 
 To avoid the possibility of overtraining/mistraining, I discarded the timestamp
-and window columns from the data.  These columns correlate with the outcome
-variable, but won't be useful for prediction when using data collected at
-another time.  The user name also shouldn't have anything to do with predicting
-which version of the bicep curls was being done.  Thus, in the end, I only
-included the 52 original data measurements for my machine learning sample.
-The 52 features are broken down into four sets of 13 features, where the four
-sets are belt (lumbar belt), arm (arm band), dumbbell, and forearm (glove).
+and window features.  They may correlate with the outcome variable, but won't be
+useful for prediction when using data collected at another time.  The user name
+also shouldn't have anything to do with predicting which version of the bicep
+curls was being done.  Thus, in the end, I only included the 52 original data
+measurements for my machine learning sample.  The 52 features are broken down
+into four sets of 13 features, where the four sets are belt (lumbar belt), arm
+(arm band), dumbbell, and forearm (glove). 
+
 The 13 features for each are:
 
 * 3d gyroscope:  roll, pitch, yaw, plus gyros\_belt\_x, gyros\_belt\_y, gyros\_belt\_z
@@ -150,11 +148,10 @@ A - F.
 
 I selected six different models to try on this data set.  I selected random
 forest because the lectures mentioned this as a good model to use for
-classification problems.  The remaining models were selected as models that
-happened to be supported by the caret package, and which were not simply
-variants on a theme.  I wanted to try a variety of models.  The only requirement
-was that the model be suitable for classification problems.  The models
-selected are:
+classification problems.  The remaining models that were selected are all
+supported by the caret package.  I wanted to try a variety of models.  The only
+requirement is that the model be suitable for classification problems.  The
+models selected are:
 
 * Random Forest
 * K Nearest Neighbor
@@ -163,12 +160,11 @@ selected are:
 * Support Vector Machines w/ Linear Kernel
 * Linear Discriminant Analysis
 
-For all models, the data was partitioned into a training data set (60% of the
-original data) and a test data set (40% of the original data).  The intent is
-that the out-of-sample error rate can be measured on the test data set.
+For all models, the data was partitioned into a training and a test data set
+in a 60/40 split so the out-of-sample error rate can be measured on a test data set.
 
-There is an additional sample of 20 events.  This sample is not used for this
-part of the analysis.  However, the best fit produced in this analysis is used
+There is an additional sample of 20 events.  This sample is not used in this
+analysis.  However, the best model produced in this analysis is used
 to predict the method of bicep curl performed for each of those events and
 those predictions were separately submitted for grading.
 
@@ -188,17 +184,16 @@ package, with 100 trees:
 <<ExploratoryRFPlot>>
 ```
 
-Given the increase in computing time as the number of trees is increased, and
-contrasting this with the minimal gain in accuracy above about 40, for the final
-random forest fit, I set the number of trees to be 40.
-
-Exploratory analysis also showed that it was reasonable and safe to set the mtry
-parameter to half the number of features, that doing so did not decrease the
-quality of the fit.  Since caret, by default, will try three different values
-of mtry, setting an explicit value sped the fit up by a factor of three.
+Given the increase in computing time as the number of trees increases, and
+contrasting this with the minimal gain in accuracy above about 40, I set the
+number of trees to be 40.  Exploratory analysis also showed that it was
+reasonable and safe to set the mtry parameter to half the number of features,
+that doing so did not decrease the quality of the fit.  Since caret, by default,
+will try three different values of mtry, setting an explicit value speeds the
+fit up by a factor of three.
 
 Finally, prox=TRUE (e.g., `proximity=TRUE`) was passed to the random forest
-algorithm so that it would keep additional data during its processing.
+algorithm so that it will keep additional data during its processing.
 
 ### K Nearest Neighbor Tuning
 
@@ -215,22 +210,14 @@ of diagnostic output that would otherwise be seen.
 
 The fits for all models use 5 rounds of repeated cross validation.
 
-### Tuning summary
-
-Other than the parameters and tuning described here, all other fit parameters
-were left at their default values.
-
 ## Results
 
 After each fit was trained, the confusion matrix was generated using that fit
 on the training sample (to look at in-sample accuracy) and on the test sample
-(to look at the out-of-sample accuracy).  Additionally, since cross validation
-was used on all models, the accuracy as measured by cross validation is
-available to compare to the value measured on the test sample.
-
-The "accuracy" measurement simply means the percentage of correct predictions --
-true positives and true negatives.  The error rate is simply 1 - accuracy (or
-100% - accuracy as a percentage).
+(to look at the out-of-sample accuracy).  The "accuracy" measurement simply
+means the percentage of correct predictions -- true positives and true
+negatives.  The error rate is therefore 1 - accuracy (or 100% - accuracy as a
+percentage).
 
 The out-of-sample accuracy of the six models varies widely, from almost 50%
 accuracy to over 99% accuracy.
@@ -244,10 +231,7 @@ suggests the possibility of overfitting, but the model was also highly accurate
 on the test sample.  Therefore, I am not worried about overfitting in this case.
 
 Notice, as expected, that in almost all cases, the in-sample error rate is
-lower than the out-of-sample error rate.  The only model for which that is not
-true is CART, which was about 50% accurate.  This is still better than random
-guessing, which would only be expected to be about 20% accurate given that
-there are five possible choices.
+lower than the out-of-sample error rate.
 
 The running time in seconds for each model fit is also shown.  The fastest
 model was about 35 times faster than the slowest!  Interestingly, the fastest
