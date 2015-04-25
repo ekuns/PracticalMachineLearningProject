@@ -67,20 +67,31 @@ read_chunk('assignment.R')
 <<PostRunCalculations>>
 ```
 
-# Abstract
+## Abstract
 
 In this exercise, I will run various machine learning algorithms on a data sample
-collected while study participants were weight lifting.  The goal is to accurately
+collected while study participants were performing bicep curls.  The goal is to accurately
 predict the specific activity being done based on measurements made during the
 activity.  This is a classification machine learning problem.
 
-# Data Set Description
+## Data Set Description
 
 The data set is from:
 
-Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; and Fuks, H. Qualitative Activity 
-Recognition of Weight Lifting Exercises, Proceedings of 4th International Conference
-with SIGCHI (Augmented Human '13).  Stuttgart, German, ACM SGICHI, 2013
+Velloso, E.; Bulling, A.; Gellersen, H.; Ugulino, W.; Fuks, H. Qualitative Activity
+Recognition of Weight Lifting Exercises. Proceedings of 4th International Conference
+in Cooperation with SIGCHI (Augmented Human '13) . Stuttgart, Germany: ACM SIGCHI, 2013. 
+
+The data set was gathered from the web site http://groupware.les.inf.puc-rio.br/har --
+a collection of Human Activity Recognition (HAR) data sets and publications which
+itself may be cited as follows:
+
+Ugulino, W.; Cardador, D.; Vega, K.; Velloso, E.; Milidiu, R.; Fuks, H. Wearable
+Computing: Accelerometers' Data Classification of Body Postures and Movements. 
+Proceedings of 21st Brazilian Symposium on Artificial Intelligence. Advances in
+Artificial Intelligence - SBIA 2012. In: Lecture Notes in Computer Science. ,
+pp. 52-61. Curitiba, PR: Springer Berlin / Heidelberg, 2012. ISBN 978-3-642-34458-9.
+DOI: 10.1007/978-3-642-34459-6_6. 
 
 In the experiment, the participants were asked to do ten repetitions of bicep
 curls in one of five different ways, correct and four different incorrect
@@ -107,7 +118,7 @@ algorithms I was using, because I was not treating the data as a time series.
 In fact, it turns out that one does not need to treat this data as a time
 series to accurately predict which form of bicep curls was being done.
 
-# Data Selection
+## Data Selection
 
 I decided to try a variety of different models to see how they perform.  After
 some exploratory analysis, I realized that the post-processing columns mostly
@@ -135,7 +146,7 @@ The data set used as input to the training models includes these 52 features plu
 the `classe` feature that is the method in which the exercise was done, a letter
 A - F.
 
-# Model Selection
+## Model Selection
 
 I selected six different models to try on this data set.  I selected random
 forest because the lectures mentioned this as a good model to use for
@@ -161,7 +172,7 @@ part of the analysis.  However, the best fit produced in this analysis is used
 to predict the method of bicep curl performed for each of those events and
 those predictions were separately submitted for grading.
 
-## Random Forest Fit Tuning
+### Random Forest Fit Tuning
 
 With random forests, Caret, by default, fits 500 trees with three different
 values of the tuning parameter mtry.  In order to decrease the running time
@@ -189,28 +200,27 @@ of mtry, setting an explicit value sped the fit up by a factor of three.
 Finally, prox=TRUE (e.g., `proximity=TRUE`) was passed to the random forest
 algorithm so that it would keep additional data during its processing.
 
-## K Nearest Neighbor Tuning
+### K Nearest Neighbor Tuning
 
 For the K Nearest Neighbor model, the tune length was increased from the default
 of 3 up to 20.  This allowed this model to explore a larger set of values of
 the parameters it was fitting.
 
-## Stochastic Gradient Boosting Tuning
+### Stochastic Gradient Boosting Tuning
 
 Verbose was set to false for Stochastic Gradient Boosting to quiet the flood
 of diagnostic output that would otherwise be seen.
 
-## Cross-validation
+### Cross-validation
 
 The fits for all models use 5 rounds of repeated cross validation.
 
-## Tuning summary
+### Tuning summary
 
 Other than the parameters and tuning described here, all other fit parameters
-were left at their default values.  Thus, most fit parameters were left at their
-defaults, trusting the library authors to choose reasonable defaults.
+were left at their default values.
 
-# Results
+## Results
 
 After each fit was trained, the confusion matrix was generated using that fit
 on the training sample (to look at in-sample accuracy) and on the test sample
@@ -222,15 +232,15 @@ The "accuracy" measurement simply means the percentage of correct predictions --
 true positives and true negatives.  The error rate is simply 1 - accuracy (or
 100% - accuracy as a percentage).
 
-The accuracy of the six models varies widely, from almost 50% accuracy to over
-99% accuracy.  (By "accuracy" I mean the measured accuracy 
+The out-of-sample accuracy of the six models varies widely, from almost 50%
+accuracy to over 99% accuracy.
 
 Classification and regression trees performed by far the worst, but several
 models were so-so at best.  Only two of the models performed better than 95%
 accuracy:  random forest and stochastic gradient boosting.  The random forest
 model was the clear winner, with better than 99% accuracy.  In fact, the
-random forest model achieved a 100% accuracy on the training sample.  This
-suggests the possibility of overfitting, but the model was also higly accurate
+random forest model achieved a 100% accuracy on the training sample!  This
+suggests the possibility of overfitting, but the model was also highly accurate
 on the test sample.  Therefore, I am not worried about overfitting in this case.
 
 Notice, as expected, that in almost all cases, the in-sample error rate is
@@ -241,7 +251,10 @@ there are five possible choices.
 
 The running time in seconds for each model fit is also shown.  The fastest
 model was about 35 times faster than the slowest!  Interestingly, the fastest
-models to train were also the least accurate, as a group.
+models to train were also the least accurate, as a group.  This analysis was
+run using the `doParallel` library on a dual quad-core hyperthreaded system with
+48 GB RAM.  It took _significantly_ longer when run in single-threaded fashion
+on a normal laptop.
 
 |                    Model    | Accuracy (%) | Out of Sample Error (%) | In Sample Error (%) | Running Time (sec) |
 | ---------------------------------------: | :-----------: | :-----------: | --------------: | ------------: |
@@ -284,7 +297,7 @@ matches the actual measured out-of-sample error very nicely, for all models.
 In all cases, the cross validation measurement of the out-of-sample error rate
 was within 1% of the out-of-sample error rate as measured in the test sample.
 
-# Conclusion
+## Conclusion
 
 Using a random forest model, it is possible to get an excellent fit, meaning it
 is possible to accurately predict the exercise method using just the 52 features
@@ -303,7 +316,7 @@ Note that the random forest model tuned in this analysis was used to predict the
 20 samples provided for the "Course Project: Submission" portion, and all 20
 were correctly predicted.
 
-# Appendix:  Code for the Analysis
+## Appendix:  Code for the Analysis
 
 All of the code used for the fitting is shown below.
 
